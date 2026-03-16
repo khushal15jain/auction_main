@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String
+  password    String
+  avatar      String?
+  bio         String?
+  location    String?
+  phone       String?
+  preferences String?  @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items         Item[]
+  bids          Bid[]
+  sentMessages  Message[]      @relation("SentMessages")
+  receivedMessages Message[]   @relation("ReceivedMessages")
+  ratingsGiven  Rating[]       @relation("RatingsGiven")
+  ratingsReceived Rating[]     @relation("RatingsReceived")
+  payments      Payment[]
+  notifications Notification[]
+  watchlist     Watchlist[]
+}
+
+model Category {
+  id    String @id @default(uuid())
+  name  String @unique
+  slug  String @unique
+  icon  String @default("📦")
+  items Item[]
+}
+
+model Item {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  images      String   @default("[]")
+  condition   String   @default("used")
+  startPrice  Float
+  currentPrice Float?
+  buyNowPrice Float?
+  auctionType String   @default("english")
+  startTime   DateTime @default(now())
+  endTime     DateTime
+  status      String   @default("active")
+  views       Int      @default(0)
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  seller     User   @relation(fields: [sellerId], references: [id])
+  sellerId   String
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+
+  bids           Bid[]
+  messages       Message[]
+  ratings        Rating[]
+  payments       Payment[]
+  shippingOptions ShippingOption[]
+  watchlist      Watchlist[]
+}
+
+model Bid {
+  id         String   @id @default(uuid())
+  amount     Float
+  isAutoBid  Boolean  @default(false)
+  maxAutoBid Float?
+  createdAt  DateTime @default(now())
+
+  bidder   User   @relation(fields: [bidderId], references: [id])
+  bidderId String
+  item     Item   @relation(fields: [itemId], references: [id])
+  itemId   String
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  sender     User    @relation("SentMessages", fields: [senderId], references: [id])
+  senderId   String
+  receiver   User    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId String
+  item       Item?   @relation(fields: [itemId], references: [id])
+  itemId     String?
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  rater       User   @relation("RatingsGiven", fields: [raterId], references: [id])
+  raterId     String
+  ratedUser   User   @relation("RatingsReceived", fields: [ratedUserId], references: [id])
+  ratedUserId String
+  item        Item?  @relation(fields: [itemId], references: [id])
+  itemId      String?
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  amount          Float
+  stripePaymentId String?
+  status          String   @default("pending")
+  shippingMethod  String?
+  shippingCost    Float?
+  shippingAddress String?
+  createdAt       DateTime @default(now())
+
+  buyer   User   @relation(fields: [buyerId], references: [id])
+  buyerId String
+  item    Item   @relation(fields: [itemId], references: [id])
+  itemId  String
+}
+
+model ShippingOption {
+  id            String @id @default(uuid())
+  name          String
+  price         Float
+  estimatedDays Int
+
+  item   Item   @relation(fields: [itemId], references: [id])
+  itemId String
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model Watchlist {
+  id     String @id @default(uuid())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  item   Item   @relation(fields: [itemId], references: [id])
+  itemId String
+
+  @@unique([userId, itemId])
+}
